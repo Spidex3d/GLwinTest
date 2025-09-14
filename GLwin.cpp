@@ -1,11 +1,30 @@
 #include "pch.h"
 #include <iostream>
-#include "../GLwin.h"
+#include "../GLwin.h" // In This Order
+#include <GL\gl.h> // OpenGL header
+#include <direct.h> // _getcwd
 #include <stdexcept>
 
 void GLwinHello()
 {
 	std::cout << "Hello, GLwin first test!" << std::endl;
+}
+
+// Helper: Set pixel format for OpenGL
+static bool SetPixelFormatForGL(HDC hdc) {
+    PIXELFORMATDESCRIPTOR pfd = {};
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 24;
+    pfd.cDepthBits = 24;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+
+    int pf = ChoosePixelFormat(hdc, &pfd);
+    if (pf == 0) return false;
+    if (!SetPixelFormat(hdc, pf, &pfd)) return false;
+    return true;
 }
 
 GLwinCreateWindow::GLwinCreateWindow(int width, int height, const std::wstring& title)
@@ -40,12 +59,27 @@ GLwinCreateWindow::GLwinCreateWindow(int width, int height, const std::wstring& 
 
     ShowWindow(hwnd_, SW_SHOW);
     UpdateWindow(hwnd_);
+
+    // Setup OpenGL
+    if (!setupOpenGL()) {
+        throw std::runtime_error("Failed to initialize OpenGL context");
+    }
 }
 
 
 
 GLwinCreateWindow::~GLwinCreateWindow()
 {
+    if (hglrc_) {
+        wglMakeCurrent(nullptr, nullptr);
+        wglDeleteContext(hglrc_);
+        hglrc_ = nullptr;
+    }
+    if (hdc_ && hwnd_) {
+        ReleaseDC(hwnd_, hdc_);
+        hdc_ = nullptr;
+    }
+
     if (hwnd_) {
         DestroyWindow(hwnd_);
     }
@@ -92,6 +126,32 @@ void GLwinCreateWindow::GLwinSetWindowIcon(const std::wstring& iconPath)
     }
 }
 
+bool GLwinCreateWindow::GLwinSetScreenMaximized(bool maximize)
+{
+    if (!hwnd_) return false;
+    if (maximize) {
+        ShowWindow(hwnd_, SW_MAXIMIZE);
+    }
+    else {
+        ShowWindow(hwnd_, SW_RESTORE);
+    }
+    // Optionally, verify state:
+    WINDOWPLACEMENT wp;
+    wp.length = sizeof(WINDOWPLACEMENT);
+    if (GetWindowPlacement(hwnd_, &wp)) {
+        return (maximize ? wp.showCmd == SW_MAXIMIZE : wp.showCmd == SW_SHOWNORMAL || wp.showCmd == SW_RESTORE);
+    }
+    return false;
+}
+
+void GLwinCreateWindow::swapBuffers()
+{
+	
+    if (hdc_) SwapBuffers(hdc_);
+}
+
+
+
 
 LRESULT GLwinCreateWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -136,4 +196,16 @@ LRESULT GLwinCreateWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
     }
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+bool GLwinCreateWindow::setupOpenGL()
+{
+    hdc_ = GetDC(hwnd_);
+    if (!hdc_) return false;
+    if (!SetPixelFormatForGL(hdc_)) return false;
+
+    hglrc_ = wglCreateContext(hdc_);
+    if (!hglrc_) return false;
+    if (!wglMakeCurrent(hdc_, hglrc_)) return false;
+    return true;
 }

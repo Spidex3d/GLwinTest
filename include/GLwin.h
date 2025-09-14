@@ -18,9 +18,12 @@ public:
     bool shouldClose() const;     // True if window should close
     HWND getHWND() const;         // Access native handle if needed
 
-    // Add more features as you expand (resize, input, etc.)
-    
+    // Add more windows features as you expand (resize, input, etc.
     void GLwinSetWindowIcon(const std::wstring& iconPath); // Optional: set window icon
+	bool GLwinSetScreenMaximized(bool maximize); // Optional: check if window is maximized
+
+    // Swap OpenGL buffers
+    void swapBuffers();
     
     // New: query current screen size
     int getWidth() const { return width_; }
@@ -30,10 +33,13 @@ public:
     std::function<void(int, int)> onResize;
 private:
     HWND hwnd_;
+	HDC hdc_ = nullptr; // Device context OpenGL
+	HGLRC hglrc_ = nullptr; // OpenGL rendering context
     bool closed_;
     int width_ = 0, height_ = 0;
     // Static message procedure
     static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    
+
+	bool setupOpenGL(); // Setup OpenGL context
 
 };
