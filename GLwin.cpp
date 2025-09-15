@@ -70,17 +70,17 @@ GLwinCreateWindow::GLwinCreateWindow(int width, int height, const std::wstring& 
 
 GLwinCreateWindow::~GLwinCreateWindow()
 {
-    if (hglrc_) {
+	if (hglrc_) {  // opengl context
         wglMakeCurrent(nullptr, nullptr);
         wglDeleteContext(hglrc_);
         hglrc_ = nullptr;
     }
-    if (hdc_ && hwnd_) {
+	if (hdc_ && hwnd_) {  // device context
         ReleaseDC(hwnd_, hdc_);
         hdc_ = nullptr;
     }
 
-    if (hwnd_) {
+	if (hwnd_) { // window handle
         DestroyWindow(hwnd_);
     }
 }
@@ -108,7 +108,7 @@ HWND GLwinCreateWindow::getHWND() const
 {
     return hwnd_;
 }
-
+// Set window icon from file path
 void GLwinCreateWindow::GLwinSetWindowIcon(const std::wstring& iconPath)
 {
     HICON hIcon = (HICON)LoadImage(
@@ -143,10 +143,9 @@ bool GLwinCreateWindow::GLwinSetScreenMaximized(bool maximize)
     }
     return false;
 }
-
+// Swap OpenGL buffers
 void GLwinCreateWindow::swapBuffers()
 {
-	
     if (hdc_) SwapBuffers(hdc_);
 }
 
@@ -197,7 +196,7 @@ LRESULT GLwinCreateWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
-
+// Setup OpenGL context
 bool GLwinCreateWindow::setupOpenGL()
 {
     hdc_ = GetDC(hwnd_);
