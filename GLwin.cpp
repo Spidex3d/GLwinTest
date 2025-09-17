@@ -195,6 +195,39 @@ void GLwinCreateWindow::swapBuffers()
     if (hdc_) SwapBuffers(hdc_);
 }
 
+void GLwinCreateWindow::updatePrevKeyStates()
+{
+    prevKeyState_ = keyState_;
+}
+
+bool GLwinCreateWindow::isKeyPressed(int keycode) const
+{
+    // Just pressed this frame
+    bool prev = prevKeyState_.count(keycode) ? prevKeyState_.at(keycode) : false;
+    bool curr = isKeyDown(keycode);
+    return !prev && curr;
+}
+
+bool GLwinCreateWindow::isKeyReleased(int keycode) const
+{
+    bool prev = prevKeyState_.count(keycode) ? prevKeyState_.at(keycode) : false;
+    bool curr = isKeyDown(keycode);
+    return prev && !curr;
+}
+
+bool GLwinCreateWindow::isKeyDown(int keycode) const
+{
+    auto it = keyState_.find(keycode);
+    return it != keyState_.end() && it->second;
+}
+
+bool GLwinCreateWindow::isKeyUp(int keycode) const
+{
+    auto it = keyState_.find(keycode);
+    // If key is not in the map, treat it as "up" (not pressed)
+    return it == keyState_.end() || !it->second;
+}
+
 
 //LRESULT GLwinCreateWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 LRESULT GLwinCreateWindow::GLwinGetProcAddress(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -215,26 +248,26 @@ LRESULT GLwinCreateWindow::GLwinGetProcAddress(HWND hwnd, UINT uMsg, WPARAM wPar
 
     if (self) {
         switch (uMsg) {
-            case WM_CLOSE:
-                self->closed_ = true;
-                PostQuitMessage(0);
-                return 0;
-			//case WM_KEYDOWN: // close on Escape key
-			case GLWIN_KEYDOWN: // close on Escape key
-                //if (wParam == VK_ESCAPE) {
-                if (wParam == GLWIN_ESCAPE) {
+        case WM_CLOSE:
+            self->closed_ = true;
+            PostQuitMessage(0);
+            return 0;
+            //case WM_KEYDOWN: // close on Escape key
+        case GLWIN_KEYDOWN: // close on Escape key
+            self->keyState_[(int)wParam] = true;
+            break;
+        case GLWIN_KEYUP:
+
+            self->keyState_[(int)wParam] = false;
+            break;
+        /*case GLWIN_ESCAPE:
+			if (wParam == GLWIN_ESCAPE) {
+				 self->closed_ = true;
+				 PostQuitMessage(0);
+				 return 0;
+               break;
+        }*/
                 
-                    self->closed_ = true;
-                    PostQuitMessage(0);
-                    return 0;
-                break;
-                }
-                if (wParam == GLWIN_RETURN) {
-					std::cout << "Return key pressed, closing window." << std::endl;
-                    PostQuitMessage(0);
-                    return 0;
-                break;
-                }
             case WM_SIZE: {
                 int w = LOWORD(lParam);
                 int h = HIWORD(lParam);

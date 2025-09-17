@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <string>
 #include <functional>
+#include <unordered_map>
 
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 
@@ -38,8 +39,11 @@ public:
     // Optional: user can set this to get notified when resized
     std::function<void(int, int)> onResize;
 
-    static LRESULT CALLBACK GLwinGetProcAddress(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-
+    void updatePrevKeyStates();
+	bool isKeyPressed(int keycode) const; // True if key was just pressed
+    bool isKeyReleased(int keycode) const;
+    bool isKeyDown(int keycode) const;
+    bool isKeyUp(int keycode) const;
 private:
     HWND hwnd_;
 	HDC hdc_ = nullptr; // Device context OpenGL
@@ -47,7 +51,9 @@ private:
     bool closed_;
     int width_ = 0, height_ = 0;
     // Static message procedure
-    //static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    std::unordered_map<int, bool> keyState_;
+    std::unordered_map<int, bool> prevKeyState_;
+    static LRESULT CALLBACK GLwinGetProcAddress(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 	bool setupOpenGL(); // Setup OpenGL context
 
@@ -59,10 +65,11 @@ private:
 //#define WM_KEYUP                        0x0101
 // Key codes
 #define GLWIN_KEYDOWN        256 //0x0100
-#define WM_KEYUP             257 //0x0101
+#define GLWIN_KEYUP          257 //0x0101
 
 #define GLWIN_ESCAPE         27 //0x1B
 #define GLWIN_RETURN         13 //0x0D
+#define GLWIN_SPACE          32 //0x20
 
 #define GLWIN_LEFT           37 //0x25
 #define GLWIN_UP             38 //0x26
