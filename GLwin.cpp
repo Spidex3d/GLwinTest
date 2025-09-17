@@ -1,7 +1,8 @@
 #include "pch.h"
 #include <iostream>
 #include "../GLwin.h" // In This Order
-#include <GL\gl.h> // OpenGL header
+//#include <GL\gl.h> // OpenGL header
+
 #include <direct.h> // _getcwd
 #include <stdexcept>
 
@@ -36,7 +37,8 @@ GLwinCreateWindow::GLwinCreateWindow(int width, int height, const std::wstring& 
 
     if (!classRegistered) {
         WNDCLASS wc = {};
-        wc.lpfnWndProc = GLwinCreateWindow::WindowProc;
+       // wc.lpfnWndProc = GLwinCreateWindow::WindowProc;
+        wc.lpfnWndProc = GLwinCreateWindow::GLwinGetProcAddress;
         wc.hInstance = GetModuleHandle(nullptr);
         wc.lpszClassName = CLASS_NAME;
         wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
@@ -66,8 +68,6 @@ GLwinCreateWindow::GLwinCreateWindow(int width, int height, const std::wstring& 
     }
 }
 
-
-
 GLwinCreateWindow::~GLwinCreateWindow()
 {
 	if (hglrc_) {  // opengl context
@@ -84,8 +84,8 @@ GLwinCreateWindow::~GLwinCreateWindow()
         DestroyWindow(hwnd_);
     }
 }
-
-bool GLwinCreateWindow::processEvents()
+// Remamed
+bool GLwinCreateWindow::GLwinPollEvents()
 {
     MSG msg;
     while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
@@ -143,6 +143,52 @@ bool GLwinCreateWindow::GLwinSetScreenMaximized(bool maximize)
     }
     return false;
 }
+
+void GLwinCreateWindow::GLwinWindowHint(int hint, int value)
+{
+    std::cout << "GLwinWindowHint: (hint=" << hint << ", value=" << value << ") -- not implemented.\n";
+
+}
+void GLwinCreateWindow::GLwinGetFramebufferSize(int* width, int* height)
+{
+    if (!hwnd_) {
+        if (width) *width = 0;
+        if (height) *height = 0;
+        return;
+    }
+    RECT rect;
+    if (GetClientRect(hwnd_, &rect)) {
+        if (width) *width = rect.right - rect.left;
+        if (height) *height = rect.bottom - rect.top;
+    }
+    else {
+        if (width) *width = 0;
+        if (height) *height = 0;
+    }
+}
+void GLwinCreateWindow::GLwinMakeContextCurrent()
+{
+	if (hglrc_ && hdc_) {
+		wglMakeCurrent(hdc_, hglrc_);
+	}
+}
+void GLwinCreateWindow::GLwinTerminate()
+{
+    // This is basically your destructor logic
+    if (hglrc_) {
+        wglMakeCurrent(nullptr, nullptr);
+        wglDeleteContext(hglrc_);
+        hglrc_ = nullptr;
+    }
+    if (hdc_ && hwnd_) {
+        ReleaseDC(hwnd_, hdc_);
+        hdc_ = nullptr;
+    }
+    if (hwnd_) {
+        DestroyWindow(hwnd_);
+        hwnd_ = nullptr;
+    }
+}
 // Swap OpenGL buffers
 void GLwinCreateWindow::swapBuffers()
 {
@@ -150,9 +196,8 @@ void GLwinCreateWindow::swapBuffers()
 }
 
 
-
-
-LRESULT GLwinCreateWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+//LRESULT GLwinCreateWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT GLwinCreateWindow::GLwinGetProcAddress(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     GLwinCreateWindow* self = nullptr;
     
@@ -174,13 +219,22 @@ LRESULT GLwinCreateWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
                 self->closed_ = true;
                 PostQuitMessage(0);
                 return 0;
-			case WM_KEYDOWN: // close on Escape key
-                if (wParam == VK_ESCAPE) {
+			//case WM_KEYDOWN: // close on Escape key
+			case GLWIN_KEYDOWN: // close on Escape key
+                //if (wParam == VK_ESCAPE) {
+                if (wParam == GLWIN_ESCAPE) {
+                
                     self->closed_ = true;
                     PostQuitMessage(0);
                     return 0;
-                }
                 break;
+                }
+                if (wParam == GLWIN_RETURN) {
+					std::cout << "Return key pressed, closing window." << std::endl;
+                    PostQuitMessage(0);
+                    return 0;
+                break;
+                }
             case WM_SIZE: {
                 int w = LOWORD(lParam);
                 int h = HIWORD(lParam);
