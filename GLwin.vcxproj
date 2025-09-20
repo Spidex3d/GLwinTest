@@ -144,6 +144,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\GLwin.h" />
+    <ClInclude Include="include\GLwinDefs.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
