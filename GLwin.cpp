@@ -20,6 +20,9 @@ struct GLWIN_window {
     std::unordered_map<int, bool> keyState;
     std::unordered_map<int, bool> prevKeyState;
     GLwinResizeCallback resizeCallback = nullptr;
+	// mouse state
+    double mouseX = 0.0, mouseY = 0.0;
+    bool mouseButtons[3] = { false, false, false };
 };
 
 // Internal static
@@ -237,15 +240,29 @@ void GLwinWindowHint(int hint, int value) {
     }
 }
 
-//void GLwinSetResizeCallback(GLWIN_window* window, GLwinResizeCallback callback) {
-//    if (window) window->resizeCallback = callback;
-//}
 
-// Keyboard state (GLFW-like)
+// Keyboard state 
 int GLwinGetKey(GLWIN_window* window, int keycode) {
     if (!window) return GLWIN_RELEASE;
     auto it = window->keyState.find(keycode);
     return (it != window->keyState.end() && it->second) ? GLWIN_PRESS : GLWIN_RELEASE;
+}
+// Mouse state
+int GLwinGetMouseButton(GLWIN_window* window, int button)
+{
+    if (!window || button < 0 || button > 2) return GLWIN_RELEASE;
+    return window->mouseButtons[button] ? GLWIN_PRESS : GLWIN_RELEASE;
+}
+// Get cursor position
+void GLwinGetCursorPos(GLWIN_window* window, double* xpos, double* ypos)
+{
+    if (!window) {
+        if (xpos) *xpos = 0;
+        if (ypos) *ypos = 0;
+        return;
+    }
+    if (xpos) *xpos = window->mouseX;
+    if (ypos) *ypos = window->mouseY;
 }
 
 // Optional: terminate function
@@ -286,8 +303,34 @@ static LRESULT CALLBACK GLwin_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
     case WM_KEYUP:
         if (window) window->keyState[(int)wParam] = false;
         return 0;
-    }
 
+        // Mouse events can be added here
+    case WM_MOUSEMOVE:
+        if (window) {
+            window->mouseX = GET_X_LPARAM(lParam);
+            window->mouseY = GET_Y_LPARAM(lParam);
+        }
+        break;
+    case WM_LBUTTONDOWN:
+        if (window) window->mouseButtons[GLWIN_MOUSE_BUTTON_LEFT] = true;
+        break;
+    case WM_LBUTTONUP:
+        if (window) window->mouseButtons[GLWIN_MOUSE_BUTTON_LEFT] = false;
+        break;
+    case WM_RBUTTONDOWN:
+        if (window) window->mouseButtons[GLWIN_MOUSE_BUTTON_RIGHT] = true;
+        break;
+    case WM_RBUTTONUP:
+        if (window) window->mouseButtons[GLWIN_MOUSE_BUTTON_RIGHT] = false;
+        break;
+    case WM_MBUTTONDOWN:
+        if (window) window->mouseButtons[GLWIN_MOUSE_BUTTON_MIDDLE] = true;
+        break;
+    case WM_MBUTTONUP:
+        if (window) window->mouseButtons[GLWIN_MOUSE_BUTTON_MIDDLE] = false;
+        break;
+    }
+	
     return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 

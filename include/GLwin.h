@@ -37,15 +37,16 @@ extern "C" {
     // Window hints (stub, for API compatibility)
     void GLwinWindowHint(int hint, int value);
 
-    // Keyboard input (GLFW style)
-#define GLWIN_PRESS   1
-#define GLWIN_RELEASE 0
-
+	// Keyboard input API
     int GLwinGetKey(GLWIN_window* window, int keycode);
+
+
+    // Mouse input API
+    int GLwinGetMouseButton(GLWIN_window* window, int button);
+    void GLwinGetCursorPos(GLWIN_window* window, double* xpos, double* ypos);
 
     // Optional: callback for resize
     typedef void(*GLwinResizeCallback)(int width, int height);
-   // void GLwinSetResizeCallback(GLWIN_window* window, GLwinResizeCallback callback);
 
     // Terminate and cleanup library (optional, for symmetry with GLFW)
     void GLwinTerminate(void);
